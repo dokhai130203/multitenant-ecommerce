@@ -13,7 +13,7 @@ export const SearchFilters = () => {
 
     return (
         <div className="px-4 lg:px-12 py-8 border-b flex flex-col gap-4 w-full" style={{
-            backgroundColor: "F5F5F5",
+            backgroundColor: "#F5F5F5",
         }}>
             <SearchInput />
             <div className="hidden lg:block">
@@ -26,7 +26,7 @@ export const SearchFilters = () => {
 export const SearchFiltersSkeleton = () => {
     return (
         <div className="px-4 lg:px-12 py-8 border-b flex flex-col gap-4 w-full" style={{
-            backgroundColor: "F5F5F5",
+            backgroundColor: "#F5F5F5",
         }}>
             <SearchInput disable />
             <div className="hidden lg:block">
