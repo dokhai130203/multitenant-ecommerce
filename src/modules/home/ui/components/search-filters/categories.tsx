@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { ListFilterIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -17,35 +18,38 @@ interface Props {
 };
 
 export const Categories = ({ data }: Props) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const measureRef = useRef<HTMLDivElement>(null);
-    const viewAllRef = useRef<HTMLDivElement>(null);
+    const params = useParams(); // Get URL params to determine active category
 
-    const [visibleCount, setVisibleCount] = useState(data.length);
-    const [isAnyHovered, setIsAnyHovered] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null); // [All | Electronics | Clothing | Home ... [View All]]
+    const measureRef = useRef<HTMLDivElement>(null); // invisible copy of ALL categories (off-screen)
+    const viewAllRef = useRef<HTMLDivElement>(null); // [View All 🔽] button
 
-    const activeCategory = "all";
+    const [visibleCount, setVisibleCount] = useState(data.length); // how many categories to show based on available width
+    const [isAnyHovered, setIsAnyHovered] = useState(false); // whether any category is hovered
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // whether the sidebar is open (for mobile)
+
+    const categoryParam = params.category as string | undefined; // if URL is electronics/phones => categoryParam = "electronics"
+    const activeCategory = categoryParam || "all"; // if URL is electronics/phones => activeCategory = "electronics", if URL is / => activeCategory = "all"
     
-    const activeCategoryIndex = data.findIndex((cat) => cat.slug === activeCategory);
-    const isActiveCategoryHidden = activeCategoryIndex >= visibleCount && activeCategoryIndex !== -1;
+    const activeCategoryIndex = data.findIndex((cat) => cat.slug === activeCategory); // find index of active category to determine if it's hidden in the dropdown or visible in the main navigation
+    const isActiveCategoryHidden = activeCategoryIndex >= visibleCount && activeCategoryIndex !== -1; // When isActiveCategoryHidden = true, the "View All" button highlights to signal "your active category is behind here."
 
     useEffect(() => {
         const calculateVisible = () => {
             if(!containerRef.current || !measureRef.current || !viewAllRef.current) return;
 
-            const containerWidth = containerRef.current.offsetWidth;
-            const viewAllWidth = viewAllRef.current.offsetWidth;
-            const availableWidth = containerWidth - viewAllWidth;
+            const containerWidth = containerRef.current.offsetWidth; // total bar width
+            const viewAllWidth = viewAllRef.current.offsetWidth; // view all button width
+            const availableWidth = containerWidth - viewAllWidth; // space for category items
 
-            const items = Array.from(measureRef.current.children);
+            const items = Array.from(measureRef.current.children); // all hidden items
             let totalWidth = 0;
             let visible = 0;
 
             for(const item of items) {
-                const width = item.getBoundingClientRect().width;
+                const width = item.getBoundingClientRect().width; // measure actual width of item
 
-                if(totalWidth + width > availableWidth) break;
+                if(totalWidth + width > availableWidth) break; // no more items can fit, stop counting
                 totalWidth += width;
                 visible++;
             }
@@ -53,10 +57,10 @@ export const Categories = ({ data }: Props) => {
             setVisibleCount(visible);
         };
 
-        const resizeObserver = new ResizeObserver(calculateVisible);
-        resizeObserver.observe(containerRef.current!);
+        const resizeObserver = new ResizeObserver(calculateVisible); // recalculate on resize
+        resizeObserver.observe(containerRef.current!); // observe the container for size changes
 
-        return () => resizeObserver.disconnect();
+        return () => resizeObserver.disconnect(); // cleanup on unmount
     }, [data.length]);
 
     return (
@@ -83,7 +87,7 @@ export const Categories = ({ data }: Props) => {
 
             {/* Visible items */}
             <div
-                ref={containerRef} 
+                ref={containerRef} // container for visible items and "View All" button
                 className="flex flex-nowrap items-center"
                 onMouseEnter={() => setIsAnyHovered(true)}
                 onMouseLeave={() => setIsAnyHovered(false)}
@@ -92,14 +96,15 @@ export const Categories = ({ data }: Props) => {
                     <div key={category.id}>
                         <CategoryDropdown 
                             category={category}
-                            isActive={activeCategory === category.slug}
+                            isActive={activeCategory === category.slug} // highlight active category in main navigation
                             isNavigationHovered={isAnyHovered}
                         />
                     </div>
                 ))}
 
-                <div ref={viewAllRef} className="shrink-0">
+                <div ref={viewAllRef} className="shrink-0">  {/* Prevents this button from shrinking even when space is tight. It always stays full width. */}
                     <Button
+                        variant="elevated"
                         className={cn(
                             "h-11 px-4 bg-transparent border-transparent rounded-full hover:bg-white hover:border-primary text-black",
                             isActiveCategoryHidden && !isAnyHovered && "bg-white border-primary",
@@ -113,4 +118,4 @@ export const Categories = ({ data }: Props) => {
             </div>
         </div>
     );
-}
+};
