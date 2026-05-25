@@ -1,12 +1,12 @@
-import { useQueryStates, parseAsString, parseAsArrayOf, parseAsStringLiteral } from "nuqs";
+import { createLoader, parseAsString, parseAsArrayOf, parseAsStringLiteral } from "nuqs/server";
 
-const sortValues = ["curated", "trending", "hot_and_new"] as const;
+export const sortValues = ["curated", "trending", "hot_and_new"] as const;
 
 const params = {
     sort: parseAsStringLiteral(sortValues).withDefault("curated"),
     minPrice: parseAsString
         .withOptions({
-            clearOnDefault: true, // removes the param from URL when value is null/empty 
+            clearOnDefault: true,
         })
         .withDefault(""),
     maxPrice: parseAsString
@@ -21,6 +21,4 @@ const params = {
         .withDefault([]),
 };
 
-export const useProductFilters = () => { // works exactly like useState but state lives in the URL (e.g., ?minPrice=10&maxPrice=100)
-    return useQueryStates(params);
-};
+export const loadProductFilters = createLoader(params);
