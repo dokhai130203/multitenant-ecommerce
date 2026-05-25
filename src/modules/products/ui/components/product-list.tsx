@@ -4,14 +4,19 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "@/trpc/client"
 
+import { useProductFilters } from "../../hooks/use-product-filters";
+
 interface Props {
     category?: string;
 };
 
 export const ProductList = ({ category }: Props) => {
+    const [filters] = useProductFilters(); // get filters from context (e.g. minPrice, maxPrice)
+
     const trpc = useTRPC();
     const { data } = useSuspenseQuery(trpc.products.getMany.queryOptions({ 
-        category 
+        category, // pass category to server (e.g. "electronics")
+        ...filters, // pass filters to server (e.g. minPrice, maxPrice)
     }));
 
     return (
