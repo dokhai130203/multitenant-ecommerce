@@ -1,7 +1,8 @@
 import z from "zod";
 import type { Sort, Where } from "payload";
 
-import { Category } from "@/payload-types";
+import { DEFAULT_LIMIT } from "@/constants";
+import { Category, Media } from "@/payload-types";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 
 import { sortValues } from "../search-params";
@@ -10,6 +11,8 @@ export const productsRouter = createTRPCRouter({
     getMany: baseProcedure
         .input
             (z.object({
+                cursor: z.number().default(1),
+                limit: z.number().default(DEFAULT_LIMIT),
                 category: z.string().nullable().optional(),
                 minPrice: z.string().nullable().optional(),
                 maxPrice: z.string().nullable().optional(),
@@ -19,12 +22,12 @@ export const productsRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => { // define the procedure
             const where: Where = {}; // empty = "no filters, get all products"
-            // let sort: Sort = "-createdAt"; // default sort
-            let sort: Sort = "-updatedAt"; // default sort
+            let sort: Sort = "-createdAt"; // default sort
+            // let sort: Sort = "-updatedAt"; // default sort
 
             if(input.sort === "curated") {
-                sort = "-createdAt";
-                // sort = "-updatedAt"; // most recently updated first → category first
+                // sort = "-createdAt";
+                sort = "-updatedAt"; // most recently updated first → category first
 
             }
 
@@ -34,8 +37,9 @@ export const productsRouter = createTRPCRouter({
             }
 
             if(input.sort === "trending") {
-                sort = "-createAt";
+                // sort = "-createdAt";
                 // sort = "+updatedAt"; // oldest updated first → subcategory first
+                sort = "-updatedAt"; // oldest updated first → subcategory first
             }
 
             if(input.minPrice && input.maxPrice) {
@@ -69,7 +73,6 @@ export const productsRouter = createTRPCRouter({
                 const formattedData = categoriesData.docs.map((doc) => ({
                     ...doc,
                     subcategories: (doc.subcategories?.docs ?? []).map((doc) => ({
-                        // Because of "depth: 1", these are fully populated Category objects
                         // Because of "depth: 1", we are confident "doc" will be a type of "Category"
                         ...(doc as Category),
                         subcategories: undefined,
@@ -101,8 +104,16 @@ export const productsRouter = createTRPCRouter({
                 depth: 1, // populate "category" & "image"
                 where,
                 sort,
+                page: input.cursor,
+                limit: input.limit,
             });
 
-            return data;
+            return {
+                ...data,
+                docs: data.docs.map((doc) => ({
+                    ...doc,
+                    image: doc.image as Media | null,
+                }))
+            }
         }),
 });
