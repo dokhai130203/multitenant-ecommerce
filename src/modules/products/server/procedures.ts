@@ -23,23 +23,17 @@ export const productsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => { // define the procedure
             const where: Where = {}; // empty = "no filters, get all products"
             let sort: Sort = "-createdAt"; // default sort
-            // let sort: Sort = "-updatedAt"; // default sort
 
             if(input.sort === "curated") {
-                // sort = "-createdAt";
-                sort = "-updatedAt"; // most recently updated first → category first
-
+                sort = "-createdAt";
             }
 
             if(input.sort === "hot_and_new") {
                 sort = "+createdAt";
-                // sort = "-updatedAt"; // most recently updated first → category first
             }
 
             if(input.sort === "trending") {
-                // sort = "-createdAt";
-                // sort = "+updatedAt"; // oldest updated first → subcategory first
-                sort = "-updatedAt"; // oldest updated first → subcategory first
+                sort = "-createdAt";
             }
 
             if(input.minPrice && input.maxPrice) {
