@@ -15,7 +15,6 @@ import { Orders } from './collections/Orders'
 import { Tenants } from './collections/Tenants'
 import { Products } from './collections/Products'
 import { Categories } from "./collections/Categories"
-import { Config } from './payload-types'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -39,7 +38,7 @@ export default buildConfig({
   sharp,
   plugins: [
     payloadCloudPlugin(),
-    multiTenantPlugin<Config>({
+    multiTenantPlugin({
       debug: true,
       collections: {
         products: {},

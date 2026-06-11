@@ -11,12 +11,11 @@ interface CartState { // State = data in the wardrobe
     removeProduct: (tenantSlug: string, productId: string) => void;
     clearCart: (tenantSlug: string) => void;
     clearAllCarts: () => void;
-    getCartByTenant: (tenantSlug: string) => string[]; // selector function to get the cart for a specific tenant
 };
 
 export const useCartStore = create<CartState>()( // Store = A common wardrobe for the entire app
     persist( // remember after refresh
-       (set, get) => ({ // // set and get are functions to update and access the state
+       (set) => ({ // // set and get are functions to update and access the state
             tenantCarts: {}, // initial state
             addProduct: (tenantSlug, productId) => 
                 set((state) => ({
@@ -54,8 +53,6 @@ export const useCartStore = create<CartState>()( // Store = A common wardrobe fo
                 set({
                     tenantCarts: {},
                 }),
-            getCartByTenant: (tenantSlug) =>
-                get().tenantCarts[tenantSlug]?.productIds || [], 
         }),
        {
         name: "funroad-cart",
