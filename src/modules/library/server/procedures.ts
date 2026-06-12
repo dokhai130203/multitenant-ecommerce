@@ -1,11 +1,62 @@
 import z from "zod";
+import { TRPCError } from "@trpc/server";
 
 import { DEFAULT_LIMIT } from "@/constants";
 import { Media, Tenant } from "@/payload-types";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 
 export const libraryRouter = createTRPCRouter({
-    getMany: protectedProcedure
+    getOne: protectedProcedure // get a single product in library by product id to check if user has purchased it
+        .input
+            (z.object({
+                productId: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => { // define the procedure
+            const ordersData = await ctx.db.find({ // check if user has purchased the product
+                collection: "orders",
+                limit: 1,
+                pagination: false,
+                where: {
+                    and: [
+                        {
+                            product: {
+                                equals: input.productId,
+                            },
+                        },
+                        {
+                            user: {
+                                equals: ctx.session.user.id,
+                            }
+                        },
+                    ]
+                },
+            });
+
+            const order = ordersData.docs[0];
+
+            if(!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+            }
+
+            const product = await ctx.db.findByID({
+                collection: "products",
+                id: input.productId,
+            });
+
+            if(!product) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+            }
+
+            return product;
+        }),
+    getMany: protectedProcedure // get all products in library with pagination
         .input
             (z.object({
                 cursor: z.number().default(1),
@@ -13,7 +64,7 @@ export const libraryRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => { // define the procedure
-            const ordersData = await ctx.db.find({
+            const ordersData = await ctx.db.find({ // get all orders of the user with pagination
                 collection: "orders",
                 depth: 0, // We want to just get ids without populating
                 page: input.cursor,
@@ -25,9 +76,9 @@ export const libraryRouter = createTRPCRouter({
                 },
             });
 
-            const productIds = ordersData.docs.map((order) => order.product);
+            const productIds = ordersData.docs.map((order) => order.product); // extract product ids from orders => ["a", "b", "c"]
 
-            const productsData = await ctx.db.find({
+            const productsData = await ctx.db.find({ // get all products have ids in ["a", "b", "c"]
                 collection: "products",
                 pagination: false,
                 where: {
