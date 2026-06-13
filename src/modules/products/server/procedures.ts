@@ -51,11 +51,55 @@ export const productsRouter = createTRPCRouter({
                 isPurchased = !!ordersData.docs[0]; // explain: if ordersData.docs[0] exists, it means the user has purchased the product, so isPurchased = true, otherwise false
             }
 
+            const reviews = await ctx.db.find({
+                collection: "reviews",
+                pagination: false,
+                where: {
+                    product: {
+                        equals: input.id,
+                    },
+                },
+            });
+
+            const reviewRating = 
+                reviews.docs.length > 0
+                ? reviews.docs.reduce((acc, review) => acc + review.rating, 0) / reviews.totalDocs
+                : 0;
+
+            const ratingDistribution: Record<number, number> = {
+                5: 0,
+                4: 0,
+                3: 0,
+                2: 0,
+                1: 0,
+            };
+
+            if(reviews.totalDocs > 0) {
+                reviews.docs.forEach((review) => { // count the number of reviews for each rating (1 to 5)
+                    const rating = review.rating;
+
+                    if(rating >= 1 && rating <= 5) {
+                        ratingDistribution[rating] = (ratingDistribution[rating] || 0) + 1;
+                    }
+                });
+                
+                Object.keys(ratingDistribution).forEach((key) => {
+                    const rating = Number(key);
+                    const count = ratingDistribution[rating] || 0;
+                    ratingDistribution[rating] = Math.round(
+                        (count / reviews.totalDocs) * 100
+                    );
+                });
+            }
+
             return {
                 ...product,
                 isPurchased,
                 image: product.image as Media | null,
                 tenant: product.tenant as Tenant & { image: Media | null },
+                reviewRating,
+                reviewCount: reviews.totalDocs,
+                ratingDistribution,
             }
         }),
         
@@ -160,9 +204,32 @@ export const productsRouter = createTRPCRouter({
                 limit: input.limit,
             });
 
-            return {
+            const dataWithSummarizedReviews = await Promise.all(
+                data.docs.map(async (doc) => {
+                    const reviewsData = await ctx.db.find({ // get all reviews of the product
+                        collection: "reviews",
+                        pagination: false,
+                        where: {
+                            product: {
+                                equals: doc.id,
+                            },
+                        },
+                    });
+
+                    return {
+                        ...doc,
+                        reviewCount: reviewsData.totalDocs,
+                        reviewRating:
+                            reviewsData.docs.length === 0
+                                ? 0
+                                : reviewsData.docs.reduce((acc, review) => acc + review.rating, 0) / reviewsData.totalDocs,
+                    }
+                })
+            );
+
+            return { // flow: products -> get one by one product -> get reviews of that product -> Calculate the number of reviews -> Calculate the average rating of the reviews -> attach "reviewCount" and "reviewRating" to the product -> return the product with summarized reviews data
                 ...data,
-                docs: data.docs.map((doc) => ({
+                docs: dataWithSummarizedReviews.map((doc) => ({
                     ...doc,
                     image: doc.image as Media | null,
                     tenant: doc.tenant as Tenant & { image: Media | null },
