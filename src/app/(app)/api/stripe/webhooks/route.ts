@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
     const permittedEvents: string[] = [
         "checkout.session.completed", // only listen to checkout session completed events
+        "account.updated", // listen to account updated events to check if the user has completed the verification process
     ];
 
     const payload = await getPayload({ config }); // get the payload instance to interact with the database
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
             switch (event.type) {
                 case "checkout.session.completed":
                     data = event.data.object as Stripe.Checkout.Session;
-                    
+
                     if(!data.metadata?.userId) {
                         throw new Error("User ID is required");
                     }
@@ -64,6 +65,9 @@ export async function POST(req: Request) {
                         {
                             expand: ["line_items.data.price.product"],
                         },
+                        {
+                            stripeAccount: event.account, // specify the connected account to retrieve the checkout session for
+                        },
                     );
 
                     if(
@@ -80,6 +84,7 @@ export async function POST(req: Request) {
                             collection: "orders",
                             data: {
                                 stripeCheckoutSessionId: data.id,
+                                stripeAccountId: event.account,
                                 user: user.id,
                                 product: item.price.product.metadata.id,
                                 name: item.price.product.name,
@@ -87,6 +92,22 @@ export async function POST(req: Request) {
                        });
                     }
                     break;
+                case "account.updated":
+                    data = event.data.object as Stripe.Account;
+
+                    await payload.update({
+                        collection: "tenants",
+                        where: {
+                            stripeAccountId: {
+                                equals: data.id,
+                            },
+                        },
+                        data: {
+                            stripeDetailsSubmitted: data.details_submitted,
+                        },
+                    });
+
+                break;
                 default:
                     throw new Error(`Unhandled event: ${event.type}`);
             }
