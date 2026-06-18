@@ -14,6 +14,8 @@ interface Props {
     searchParams: Promise<SearchParams>;
 };
 
+export const dynamic = "force-dynamic";
+
 const Page = async ({ params, searchParams }: Props) => {
     const { category } = await params; // get category from url params (e.g. /electronics -> category: "electronics")
     const filters = await loadProductFilters(searchParams); // get filters from url search params (e.g. ?minPrice=10&maxPrice=100 -> filters: { minPrice: "10", maxPrice: "100" })
