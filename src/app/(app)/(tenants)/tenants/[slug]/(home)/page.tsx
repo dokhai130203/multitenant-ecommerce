@@ -12,6 +12,8 @@ interface Props {
     params: Promise<{ slug: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 const Page = async ({ params, searchParams }: Props) => {
     const { slug } = await params; // get tenant slug from url params (e.g. /[slug] -> slug: "johns-store")
     const filters = await loadProductFilters(searchParams);
