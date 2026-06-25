@@ -46,7 +46,6 @@ export default buildConfig({
   plugins: [
     payloadCloudPlugin(),
     multiTenantPlugin({
-      debug: true,
       collections: {
         products: {},
       },

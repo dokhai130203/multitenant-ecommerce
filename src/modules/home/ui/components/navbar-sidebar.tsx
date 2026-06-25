@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import {
@@ -6,6 +8,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet"
+import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface NavbarItem {
@@ -24,6 +29,9 @@ export const NavbarSidebar = ({
     open,
     onOpenChange,
 } : Props) => {
+    const trpc = useTRPC();
+    const session = useQuery(trpc.auth.session.queryOptions());
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
@@ -47,14 +55,25 @@ export const NavbarSidebar = ({
                         </Link>
                     ))}
                     <div className="border-t">
-                        <Link 
-                            href="/sign-in" onClick={() => onOpenChange(false)} className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium">
-                            Log in
-                        </Link>
-                        <Link 
-                            href="/sign-up" onClick={() => onOpenChange(false)} className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium">
-                            Start selling
-                        </Link>
+                        {session.data?.user ? (
+                            <Link 
+                                href="/admin" onClick={() => onOpenChange(false)}
+                                className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium"
+                            >
+                                Dashboard
+                            </Link>   
+                        ) : (
+                            <>
+                                <Link 
+                                    href="/sign-in" onClick={() => onOpenChange(false)} className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium">
+                                    Log in
+                                </Link>
+                                <Link 
+                                    href="/sign-up" onClick={() => onOpenChange(false)} className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium">
+                                    Start selling
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </ScrollArea>
             </SheetContent>
