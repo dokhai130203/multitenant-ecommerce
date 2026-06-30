@@ -112,6 +112,31 @@ export const checkoutRouter = createTRPCRouter({
                 });
             }
 
+            const currentUser = await ctx.db.findByID({ // explanation: find the current user in the database to check if they are the owner of the tenant
+                collection: "users",
+                id: ctx.session.user.id,
+                depth: 1,
+            });
+
+            if(!currentUser) {
+                throw new TRPCError({ 
+                    code: "NOT_FOUND", 
+                    message: "User not found",
+                });
+            }
+
+            const ownerTenantId = currentUser.tenants?.[0]?.tenant && //
+                (typeof currentUser.tenants?.[0]?.tenant === "object" 
+                    ? currentUser.tenants?.[0]?.tenant.id 
+                    : currentUser.tenants?.[0]?.tenant); // // explanation: this line checks if the current user is the owner of the tenant by comparing the tenant ID of the product with the tenant ID of the user
+
+            if(ownerTenantId === tenant.id) {
+                throw new TRPCError({ 
+                    code: "FORBIDDEN", 
+                    message: "You cannot purchase your own product",
+                });
+            }
+
             if(!tenant.stripeDetailsSubmitted) { // check if the tenant has completed the Stripe verification process
                 throw new TRPCError({ 
                     code: "BAD_REQUEST", 

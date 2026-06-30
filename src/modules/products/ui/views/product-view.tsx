@@ -115,31 +115,42 @@ export const ProductView = ({ productId, tenantSlug }: ProductViewProps) => {
                     <div className="col-span-2">
                         <div className="border-t lg:border-t-0 lg:border-l h-full">
                             <div className="flex flex-col gap-4 p-6 border-b">
-                                <div className="flex flex-row items-center gap-2">
-                                    <CartButton
-                                        isPurchased={data.isPurchased}
-                                        productId={productId}
-                                        tenantSlug={tenantSlug}
-                                    />
+                                <CartButton
+                                    isPurchased={data.isPurchased}
+                                    isOwner={data.isOwner}
+                                    productId={productId}
+                                    tenantSlug={tenantSlug}
+                                />
+
+                                {!data.isOwner && (
                                     <Button
                                         variant="elevated"
-                                        className="size-12"
+                                        className="w-full"
                                         onClick={() => {
                                             setIsCopied(true);
                                             navigator.clipboard.writeText(window.location.href);
                                             toast.success("Product URL copied to clipboard");
-
                                             setTimeout(() => {
                                                 setIsCopied(false);
                                             }, 1000);
                                         }}
                                         disabled={isCopied}
                                     >
-                                        {isCopied ? <CheckIcon /> : <LinkIcon />}
+                                        {isCopied ? (
+                                            <>
+                                                <CheckIcon className="mr-2 size-4" />
+                                                Copied!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <LinkIcon className="mr-2 size-4" />
+                                                Share Product
+                                            </>
+                                        )}
                                     </Button>
-                                </div>
+                                )}
 
-                                <p className="text-center font-medium">
+                                <p className="text-center text-sm font-medium text-muted-foreground">
                                     {data.refundPolicy === "no-refund"
                                         ? "No refunds"
                                         : `${data.refundPolicy} money back guarantee`
