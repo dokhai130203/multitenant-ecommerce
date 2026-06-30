@@ -16,7 +16,7 @@ export const NavBar = ({ slug }: Props) => {
                     variant="elevated"
                     asChild
                 >
-                    <Link href={generateTenantURL(slug)}>
+                    <Link href="/">
                         Continue Shopping
                     </Link>
                 </Button>

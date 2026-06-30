@@ -37,6 +37,7 @@ export const productsRouter = createTRPCRouter({
             }
 
             let isPurchased = false;
+            let isOwner = false;
 
             if(session.user) {
                 const ordersData = await ctx.db.find({
@@ -60,6 +61,18 @@ export const productsRouter = createTRPCRouter({
                 });
 
                 isPurchased = !!ordersData.docs[0]; // explain: if ordersData.docs[0] exists, it means the user has purchased the product, so isPurchased = true, otherwise false
+
+                const user = await ctx.db.findByID({
+                    collection: "users",
+                    id: session.user.id,
+                    depth: 1,
+                });
+
+                isOwner = user?.tenants?.some( // explain: check if the user is the owner of the tenant that owns the product by comparing tenant IDs
+                    (userTenant) =>
+                        (typeof userTenant.tenant === "object" ? userTenant.tenant.id : userTenant.tenant) ===
+                        (typeof product.tenant === "object" ? product.tenant?.id : product.tenant)
+                ) ?? false;
             }
 
             const reviews = await ctx.db.find({
@@ -106,6 +119,7 @@ export const productsRouter = createTRPCRouter({
             return {
                 ...product,
                 isPurchased,
+                isOwner,
                 image: product.image as Media | null,
                 tenant: product.tenant as Tenant & { image: Media | null },
                 reviewRating,
