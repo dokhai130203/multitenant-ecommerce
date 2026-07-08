@@ -40,6 +40,8 @@ export const productsRouter = createTRPCRouter({
             let isOwner = false;
 
             if(session.user) {
+                // Check if the user has purchased the product
+                // isPurchased: find order has product = input.id and user = session.user.id, if found, isPurchased = true, else false
                 const ordersData = await ctx.db.find({
                     collection: "orders",
                     pagination: false,
@@ -60,22 +62,28 @@ export const productsRouter = createTRPCRouter({
                     },
                 });
 
-                isPurchased = !!ordersData.docs[0]; // explain: if ordersData.docs[0] exists, it means the user has purchased the product, so isPurchased = true, otherwise false
+                isPurchased = !!ordersData.docs[0]; // explain: if ordersData.docs[0] exists, it means the user has purchased the product, so isPurchased = true, otherwise false, !! put object to boolean
 
+                // Check if the user is the owner of the tenant that owns the product
+                // isOwner: get user with tenant objects then compare 
                 const user = await ctx.db.findByID({
                     collection: "users",
                     id: session.user.id,
-                    depth: 1,
+                    depth: 1, // populate tenant objects, not just tenant IDs, so we can check if the user is the owner of the tenant that owns the product
                 });
 
                 isOwner = user?.tenants?.some( // explain: check if the user is the owner of the tenant that owns the product by comparing tenant IDs
                     (userTenant) =>
-                        (typeof userTenant.tenant === "object" ? userTenant.tenant.id : userTenant.tenant) ===
-                        (typeof product.tenant === "object" ? product.tenant?.id : product.tenant)
+                        (typeof userTenant.tenant === "object" 
+                            ? userTenant.tenant.id // depth > 0: is an object, get .id
+                            : userTenant.tenant) === // depth = 0: is a string, compare directly
+                        (typeof product.tenant === "object" 
+                            ? product.tenant?.id 
+                            : product.tenant)
                 ) ?? false;
             }
 
-            const reviews = await ctx.db.find({
+            const reviews = await ctx.db.find({ // get all reviews of this product
                 collection: "reviews",
                 pagination: false,
                 where: {
@@ -85,7 +93,7 @@ export const productsRouter = createTRPCRouter({
                 },
             });
 
-            const reviewRating = 
+            const reviewRating = // accumulates all ratings, then divides by the total number of reviews to get an average.
                 reviews.docs.length > 0
                 ? reviews.docs.reduce((acc, review) => acc + review.rating, 0) / reviews.totalDocs
                 : 0;
@@ -100,7 +108,7 @@ export const productsRouter = createTRPCRouter({
 
             if(reviews.totalDocs > 0) {
                 reviews.docs.forEach((review) => { // count the number of reviews for each rating (1 to 5)
-                    const rating = review.rating;
+                    const rating = review.rating; // get the rating of the review (1 to 5)
 
                     if(rating >= 1 && rating <= 5) {
                         ratingDistribution[rating] = (ratingDistribution[rating] || 0) + 1;
@@ -123,14 +131,14 @@ export const productsRouter = createTRPCRouter({
                 image: product.image as Media | null,
                 tenant: product.tenant as Tenant & { image: Media | null },
                 reviewRating,
-                reviewCount: reviews.totalDocs,
+                reviewCount: reviews.totalDocs, // explain: reviews.totalDocs is the total number of reviews for the product, which is the same as the number of reviews in the ratingDistribution object, so we can use it to calculate the percentage of each rating in the ratingDistribution object
                 ratingDistribution,
             }
         }),
         
     getMany: baseProcedure
-        .input
-            (z.object({
+        .input(
+            z.object({
                 cursor: z.number().default(1),
                 limit: z.number().default(DEFAULT_LIMIT),
                 search: z.string().nullable().optional(),
@@ -159,7 +167,7 @@ export const productsRouter = createTRPCRouter({
             }
 
             if(input.sort === "trending") {
-                sort = "-createdAt";
+                sort = "-createdAt"; // ← initial DB sort, will be re-sorted after reviewCount is computed
             }
 
             if(input.minPrice && input.maxPrice) {
@@ -272,6 +280,15 @@ export const productsRouter = createTRPCRouter({
                     }
                 })
             );
+
+            if(input.sort === "trending") { // also sort trending by reviewCount (descending) and then by createdAt (descending) if reviewCount is the same
+                dataWithSummarizedReviews.sort((a, b) => {
+                    if(b.reviewCount !== a.reviewCount) {
+                        return b.reviewCount - a.reviewCount;
+                    }
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                });
+            }
 
             return { // flow: products -> get one by one product -> get reviews of that product -> Calculate the number of reviews -> Calculate the average rating of the reviews -> attach "reviewCount" and "reviewRating" to the product -> return the product with summarized reviews data
                 ...data,

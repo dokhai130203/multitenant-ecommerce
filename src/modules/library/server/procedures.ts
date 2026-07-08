@@ -57,8 +57,8 @@ export const libraryRouter = createTRPCRouter({
             return product;
         }),
     getMany: protectedProcedure // get all products in library with pagination
-        .input
-            (z.object({
+        .input(
+            z.object({
                 cursor: z.number().default(1),
                 limit: z.number().default(DEFAULT_LIMIT),
             }),
