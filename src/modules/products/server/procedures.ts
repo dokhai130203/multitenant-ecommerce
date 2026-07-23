@@ -8,6 +8,7 @@ import { Category, Media, Tenant } from "@/payload-types";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 
 import { sortValues } from "../search-params";
+import { getCuratedScore } from "./ranking";
 
 export const productsRouter = createTRPCRouter({
     getOne: baseProcedure
@@ -158,12 +159,8 @@ export const productsRouter = createTRPCRouter({
             }; // empty = "no filters, get all products"
             let sort: Sort = "-createdAt"; // default sort
 
-            if(input.sort === "curated") {
-                sort = "-createdAt";
-            }
-
             if(input.sort === "hot_and_new") {
-                sort = "+createdAt";
+                sort = "-createdAt";
             }
 
             if(input.sort === "trending") {
@@ -287,6 +284,14 @@ export const productsRouter = createTRPCRouter({
                         return b.reviewCount - a.reviewCount;
                     }
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                });
+            }
+
+            if(input.sort === "curated") {
+                dataWithSummarizedReviews.sort((a, b) => {
+                    const scoreA = getCuratedScore(a.reviewRating, a.reviewCount, a.createdAt);
+                    const scoreB = getCuratedScore(b.reviewRating, b.reviewCount, b.createdAt);
+                    return scoreB - scoreA; // higher score first (descending order)
                 });
             }
 
