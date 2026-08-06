@@ -1,10 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { headers as getHeaders } from "next/headers";
+import { createPayloadRequest, logoutOperation } from "payload";
 
 import { stripe } from "@/lib/stripe";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 
-import { generateAuthCookie } from "../utils";
+import { clearAuthCookie, generateAuthCookie } from "../utils";
 import { loginSchema, registerSchema } from "../schema";
 
 export const authRouter = createTRPCRouter({
@@ -113,5 +114,42 @@ export const authRouter = createTRPCRouter({
             });
 
             return data;
-        }),    
+        }),
+    logout: baseProcedure.mutation(async ({ ctx }) => {
+        const headers = await getHeaders(); // get cookies from the request headers
+        const session = await ctx.db.auth({ headers }); // .auth() check user login base on cookie
+
+        if (!session.user) { // check if user is logged in, if not throw an error
+            throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "Not authenticated",
+            });
+        }
+
+        const payloadRequest = await createPayloadRequest({ // create a request object to pass to the logout operation
+            config: ctx.db.config,
+            request: new Request("https://localhost"),
+        });
+
+        const result = await logoutOperation({
+            collection: ctx.db.collections.users,
+            req: {
+                ...payloadRequest,
+                user: session.user,
+            },
+        });
+
+        if (!result) { // check if logout operation was successful, if not throw an error
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Failed to logout",
+            });
+        }
+
+        await clearAuthCookie({
+            prefix: ctx.db.config.cookiePrefix,
+        });
+
+        return true;
+    }),
 });
