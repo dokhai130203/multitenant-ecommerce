@@ -12,6 +12,7 @@ import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 
 import { NavbarSidebar } from "./navbar-sidebar";
+import { SignOutButton } from "../../../auth/ui/components/sign-out-button";
 
 const poppins = Poppins({
     subsets: ["latin"],
@@ -87,15 +88,19 @@ export const NavBar = () => {
             </div>
             
             {session.data?.user ? (
-                <div className="hidden lg:flex">
+                <div className="hidden lg:flex h-full items-center">
                     <Button
                         asChild
-                        className="border-l border-t-0 border-b-0 border-r-0 px-12 h-full rounded-none bg-black text-white hover:bg-pink-400 hover:text-black transition-colors text-lg"
+                        className="border-l border-t-0 border-b-0 border-r-0 px-11 h-full rounded-none bg-black text-white hover:bg-pink-400 hover:text-black transition-colors text-lg"
                     >
                         <Link href="/admin">
                             Dashboard
                         </Link>
                     </Button>
+                    <SignOutButton
+                        variant="ghost"
+                        className="h-full rounded-none border-l border-t-0 border-b-0 border-r-0 px-11 text-lg hover:bg-pink-400 hover:text-black"
+                    />
                 </div>
             ) : (
                 <div className="hidden lg:flex">

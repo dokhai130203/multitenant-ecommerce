@@ -12,6 +12,7 @@ import { useTRPC } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SignOutButton } from "../../../auth/ui/components/sign-out-button";
 
 interface NavbarItem {
     href: string;
@@ -56,12 +57,19 @@ export const NavbarSidebar = ({
                     ))}
                     <div className="border-t">
                         {session.data?.user ? (
-                            <Link 
-                                href="/admin" onClick={() => onOpenChange(false)}
-                                className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium"
-                            >
-                                Dashboard
-                            </Link>   
+                            <>
+                                <Link 
+                                    href="/admin" onClick={() => onOpenChange(false)}
+                                    className="w-full text-left p-4 flex items-center hover:bg-black hover:text-white text-base font-medium"
+                                >
+                                    Dashboard
+                                </Link>
+                                <SignOutButton
+                                    variant="ghost"
+                                    className="w-full justify-start rounded-none border-none p-4 text-base font-medium hover:bg-black hover:text-white"
+                                    onComplete={() => onOpenChange(false)}
+                                />
+                            </>
                         ) : (
                             <>
                                 <Link 
