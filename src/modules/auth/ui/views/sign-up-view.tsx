@@ -106,7 +106,6 @@ export const SignUpView = () => {
                                         className={cn("hidden", showPreview && "block")}
                                     >
                                         Your store will be available at&nbsp;
-                                        {/* TODO: Use proper method to generate preview URL */}
                                         <strong>{username}</strong>.shop.com
                                     </FormDescription>
                                     <FormMessage />

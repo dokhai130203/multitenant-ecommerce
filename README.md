@@ -44,16 +44,21 @@ A portfolio-grade multi-tenant SaaS marketplace where vendors create their own s
 ### Buyer
 
 - Browse all vendor storefronts and the global marketplace
-- Filter by category, price range, and tags; sort by Curated, Trending, Hot & New
+- Filter by category, price range, and tags; sort by:
+  - Curated: quality ranking score (rating × log(reviews) × recency multiplier decaying from 1.0 to 0.5 over 90 days)
+  - Trending: sort by review count descending, newest first as tie-breaker
+  - Hot & New: newest products first (createdAt descending)
 - Per-tenant shopping cart — shop from multiple vendors simultaneously, persisted via localStorage
 - Secure checkout via Stripe
 - Purchased products appear in personal Library
 - Leave reviews and ratings after purchase
+- Sign out with server-side session invalidation via Payload logoutOperation and auth cookie clearing
 
 ### Platform
 
 - Role-based access: `super-admin` (sees all tenants/products) vs regular `user` (scoped to own tenant)
-- Webhook-driven order creation and Stripe account verification — signature-verified, idempotent
+- Webhook-driven order creation and Stripe account verification — signature-verified, idempotent, with duplicate-safe order creation via Stripe checkout session lookup
+- Logout uses a dedicated `auth.logout` mutation and refreshes client session state
 - Cursor-based infinite scroll pagination
 - Type-safe API layer end to end (tRPC + Zod + Payload generated types)
 
@@ -244,6 +249,14 @@ stripe listen --forward-to http://localhost:3000/api/stripe/webhooks
 
 Keep this terminal running alongside `bun run dev` whenever testing checkout locally.
 
+### Production (Vercel)
+1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint
+2. Endpoint URL: `https://your-domain.vercel.app/api/stripe/webhooks`
+3. Event to listen for: `checkout.session.completed`
+4. Copy the signing secret → set as `STRIPE_WEBHOOK_SECRET` in Vercel Environment Variables
+
+> The webhook handler is idempotent — if Stripe retries a delivery, duplicate orders will not be created.
+
 ---
 
 ## 👥 Demo Accounts
@@ -256,6 +269,9 @@ Keep this terminal running alongside `bun run dev` whenever testing checkout loc
 | `doker@demo.com` | `demo`   | buyer — create manually for testing                      |
 
 > **Note:** The seed script only creates the `admin@demo.com` account and default categories. The vendor and buyer accounts above are recommended demo accounts that can be created manually for testing.
+
+> Demo accounts must be created manually after starting the dev server.  
+> They are not created automatically by any seed script.
 
 > All accounts use **Stripe Sandbox** — no real payments are processed.
 
@@ -298,7 +314,11 @@ src/
 │
 ├── modules/                          # Feature modules (tRPC routers + UI)
 │   ├── auth/
+│   │   ├── ui/components/
+│   │   │   └── sign-out-button.tsx # reusable Sign Out button component
 │   ├── products/
+│   │   └── server/
+│   │       └── ranking.ts          # Curated score algorithm (rating × log(reviews) × recency)
 │   ├── checkout/
 │   ├── reviews/
 │   ├── tenants/
@@ -389,6 +409,8 @@ Every webhook request is signature-verified before processing. The handler alway
 - ✅ Stripe webhook signature verification (`constructEvent`)
 - ✅ Self-purchase prevention enforced server-side, not just UI
 - ✅ Review ownership checks (`depth: 0` comparison) before allowing edits
+- ✅ Sign Out invalidates server-side session via Payload logoutOperation before clearing the auth cookie
+- ✅ Stripe webhook handler is idempotent — duplicate events do not create duplicate orders
 - ✅ HTTP-only, secure, SameSite cookies for session tokens
 - ⚠️ TODO: Rate limiting on public tRPC procedures
 - ⚠️ TODO: CORS hardening for production

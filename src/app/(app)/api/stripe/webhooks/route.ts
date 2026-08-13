@@ -19,18 +19,11 @@ export async function POST(req: Request) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-        if(error! instanceof Error) {
-            console.log(error);
-        }
-        
-        console.log(`❌ Error message: ${errorMessage}`);
         return NextResponse.json(
             { message: `Webhook Error: ${errorMessage}` },
             { status: 400 },
         )
     }
-
-    console.log("✅ Success:", event.id);
 
     const permittedEvents: string[] = [
         "checkout.session.completed", // only listen to checkout session completed events
@@ -75,6 +68,24 @@ export async function POST(req: Request) {
                         !expandedSession.line_items.data.length
                     ) {
                         throw new Error("No line items found");
+                    }
+
+                    const existingOrder = await payload.find({ // check if the order already exists to avoid duplicate orders
+                        collection: "orders",
+                        where: {
+                            stripeCheckoutSessionId: {
+                                equals: data.id,
+                            },
+                        },
+                        limit: 1,
+                        pagination: false,
+                    });
+
+                    if(existingOrder.totalDocs > 0) {
+                        return NextResponse.json( // if the order already exists, return a 200 response to avoid duplicate orders
+                            { received: true, duplicate: true },
+                            { status: 200 },
+                        );
                     }
 
                     const lineItems = expandedSession.line_items.data as ExpandedLineItem[]; // TS will not recognize the expanded line items, so we need to cast it to our custom type

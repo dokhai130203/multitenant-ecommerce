@@ -26,19 +26,11 @@ export const CategoryDropdown = ({
 
     const onMouseEnter = () => {
         if(category.subcategories) {
-            console.log("hello");
             setIsOpen(true);
         }
     };
 
     const onMouseLeave = () => setIsOpen(false);
-
-    // TODO: potentially improve mobile
-    // const toggleDropdown = () => {
-    //     if(category.subcategories?.docs?.length) {
-    //         setIsOpen(!isOpen);
-    //     }
-    // };
 
     return (
         <div
