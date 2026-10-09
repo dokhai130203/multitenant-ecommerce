@@ -250,6 +250,7 @@ stripe listen --forward-to http://localhost:3000/api/stripe/webhooks
 Keep this terminal running alongside `bun run dev` whenever testing checkout locally.
 
 ### Production (Vercel)
+
 1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint
 2. Endpoint URL: `https://your-domain.vercel.app/api/stripe/webhooks`
 3. Event to listen for: `checkout.session.completed`
